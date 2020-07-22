@@ -1,0 +1,4 @@
+"main.obj",
+"i2c.obj" 
+TO "project_1" 
+RAMSIZE(256) 

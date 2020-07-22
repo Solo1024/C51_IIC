@@ -1,0 +1,204 @@
+C51 COMPILER V9.01   I2C                                                                   07/22/2020 16:39:47 PAGE 1   
+
+
+C51 COMPILER V9.01, COMPILATION OF MODULE I2C
+OBJECT MODULE PLACED IN i2c.OBJ
+COMPILER INVOKED BY: D:\软件\Keil_4_c51单片机开发\C51\BIN\C51.EXE i2c.c BROWSE DEBUG OBJECTEXTEND
+
+line level    source
+
+   1          #include "i2c.h"
+   2          /*******************************************
+   3          *函数名：       delay10us()
+   4          *函数功能；     延时10us
+   5          *输入：         null
+   6          *输出：         null
+   7          *******************************************/
+   8          
+   9          
+  10          void delay10us()
+  11          {
+  12   1              unsigned char a,b;
+  13   1              for(b=1;b>0;b--)
+  14   1                      for(a=2;a>0;a--);
+  15   1      
+  16   1      }
+  17          /*
+  18          void delay10us()
+  19          {
+  20                  unsigned char a, b;
+  21                  for (a = 1; a > 0; a--)
+  22                      for (b = 2; b > 0; b--);
+  23          }
+  24          */
+  25          
+  26          /*******************************************
+  27          *函数名：       i2cstart()
+  28          *函数功能：     起始信号，SCL时钟信号为高电平期间SDA信号产生一个下降沿
+  29          *输入：         null
+  30          *输出：         null
+  31          *备注：         起始之后，SDA和SCL都为0
+  32          *******************************************/
+  33          
+  34          void i2cstart()
+  35          {
+  36   1              SDA = 1;
+  37   1              delay10us();
+  38   1              SCL = 1;
+  39   1              delay10us();
+  40   1              SDA = 0;
+  41   1              delay10us();
+  42   1              SCL = 0;
+  43   1              delay10us();
+  44   1      }
+  45          
+  46          /*******************************************
+  47          *函数名：       i2cstop()
+  48          *函数功能：     终止信号，SCL时钟信号为高电平期间SDA信号产生一个上升沿
+  49          *输入：         null
+  50          *输出：         null
+  51          *备注：         终止之后，SDA和SCL都为1，表示总线空闲
+  52          *******************************************/
+  53          
+  54          void i2cstop()
+  55          {
+C51 COMPILER V9.01   I2C                                                                   07/22/2020 16:39:47 PAGE 2   
+
+  56   1              SDA = 0;
+  57   1              delay10us();
+  58   1      //      SCL = 0;
+  59   1      //      delay10us();
+  60   1              SCL = 1;
+  61   1              delay10us();
+  62   1              SDA = 1;
+  63   1              delay10us();
+  64   1      }
+  65          
+  66          /*******************************************
+  67          *函数名：       i2csendbyte(unsigned char dat)
+  68          *函数功能：     通过I2C发送一个字节。在SCL时钟信号高电平期间，保持发送信号SDA保持稳定
+  69          *输入：                 null
+  70          *输出：         0或1，发送成功返回1，发送失败返回0
+  71          *备注：         发送完一个字节，SDA = 1,SCL = 0
+  72          ********************************************/
+  73          
+  74          unsigned char i2csendbyte(unsigned char dat)
+  75          {
+  76   1              unsigned char a = 0, b = 0;
+  77   1              for (a = 0; a < 8; a++)
+  78   1              {
+  79   2                      SDA=dat>>7;      //起始信号之后SCL=0，所以可以直接改变SDA信号
+  80   2                      dat=dat<<1;
+  81   2                      delay10us();
+  82   2                      SCL=1;
+  83   2                      delay10us();//建立时间>4.7us
+  84   2                      SCL=0;
+  85   2                      delay10us();
+  86   2              }
+  87   1              SDA = 1;
+  88   1              delay10us();
+  89   1              SCL = 1;
+  90   1      //      delay10us();
+  91   1              while(SDA)//等待应答，也就是等待从设备把SDA拉低
+  92   1              {
+  93   2                      b++;
+  94   2                      if(b>200)        //如果超过2000us没有应答发送失败，或者为非应答，表示接收结束
+  95   2                      {
+  96   3                              SCL=0;
+  97   3                              delay10us();
+  98   3                              return 0;
+  99   3                      }
+ 100   2              }
+ 101   1              SCL = 0;
+ 102   1              delay10us();
+ 103   1              return 1;
+ 104   1      }
+ 105          
+ 106          
+ 107          /*************************************************************
+ 108          *函数名：     i2creadbyte()
+ 109          *函数功能：   使用i2c读取一个字节的数据
+ 110          *输入：       null
+ 111          *输出：       dat
+ 112          *备注：       接收完数据 SDA = 1  SCL = 0
+ 113          *************************************************************/
+ 114          
+ 115          unsigned char i2creadbyte()
+ 116          {
+ 117   1              unsigned char a = 0, dat = 0;
+C51 COMPILER V9.01   I2C                                                                   07/22/2020 16:39:47 PAGE 3   
+
+ 118   1              SDA = 1;
+ 119   1              delay10us();
+ 120   1              for (a = 0; a < 8; a++)
+ 121   1              {
+ 122   2                      SCL = 1;
+ 123   2                      delay10us();
+ 124   2                      dat = dat << 1;
+ 125   2                      delay10us();
+ 126   2                      dat |= SDA;
+ 127   2                      delay10us();
+ 128   2                      SCL = 0;
+ 129   2                      delay10us();
+ 130   2              }
+ 131   1              return dat;
+ 132   1      }
+ 133          
+ 134          /**************************************************************
+ 135          *函数名：     at24c02write(unsigned char date, unsignet char addr)
+ 136          *函数功能：   往at24c02写入一个数据
+ 137          *输入：       null
+ 138          *输出：       null     
+ 139          **************************************************************/
+ 140          
+ 141          void at24c02write(unsigned char addr, unsigned char dat)
+ 142          {
+ 143   1          i2cstart();                  
+ 144   1              i2csendbyte(0xa0);       //发送写器件地址
+ 145   1              i2csendbyte(addr);       //发送要写入的内存地址
+ 146   1              i2csendbyte(dat);        //发送数据
+ 147   1              i2cstop();
+ 148   1      }
+ 149          
+ 150          /***************************************************************
+ 151          *函数名：     at24c02read(unsigned char addr)
+ 152          *函数功能：   从at24c02读取一个数据
+ 153          *输入：       null
+ 154          *输出：       num
+ 155          ***************************************************************/
+ 156          
+ 157          unsigned char at24c02read(unsigned char addr)
+ 158          {
+ 159   1          unsigned char num;
+ 160   1          i2cstart();
+ 161   1              i2csendbyte(0xa0);
+ 162   1              i2csendbyte(addr);
+ 163   1          i2cstart();
+ 164   1              i2csendbyte(0xa1);
+ 165   1              num = i2creadbyte();
+ 166   1              i2cstop();
+ 167   1              return num;
+ 168   1      }
+ 169          
+ 170          
+ 171          
+ 172          
+ 173          
+ 174          
+ 175          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    204    ----
+C51 COMPILER V9.01   I2C                                                                   07/22/2020 16:39:47 PAGE 4   
+
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
